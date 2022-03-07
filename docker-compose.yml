@@ -1,0 +1,22 @@
+version: "3.2"
+
+volumes:
+  sshvolume:
+    external: true
+
+services:
+  medusa:
+    image: lscr.io/linuxserver/medusa
+    container_name: medusa
+    environment:
+      - PUID=1028
+      - PGID=100
+      - TZ=America/New_York
+    volumes:
+      - /volume1/nasflix/appdata/medusa:/config
+      - sshvolume:/nasflix/downloads
+      - /volume1/nasflix/media/tv:/nasflix/media/tv
+    ports:
+      - 8081:8081
+    restart: unless-stopped 
+
