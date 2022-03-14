@@ -6,13 +6,9 @@ Used Resources:
 - Sonarr for Tv
 - Radarr for Movies
 - Lidarr for Music
+- Jackett for Indexers
 - Resillo Sync for folder syncing
 - Pullio for container updates
-
-
-# Pullio 
-Pullio handles the automatic updates 
-
 
 # Portainer Install 
 ```
@@ -24,3 +20,7 @@ docker run -d --name=portainer -p 9000:9000 -v /var/run/docker.sock:/var/run/doc
 sudo chown -R docker:users /folder 
 sudo chmod -R a=,a+rX,u+w,g+w /folder 
 ```
+
+# Pullio 
+Pullio handles the automatic updates 
+
