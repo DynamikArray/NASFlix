@@ -14,6 +14,7 @@ services:
       - PUID=${NASFLIX_PUID}
       - PGID=${NASFLIX_PGID}
       - TZ=${NASFLIX_TZ}
+      - UMASK=${NASFLIX_UMASK}
       - DOCKER_MODS=ghcr.io/gilbn/theme.park:sonarr
       - TP_THEME=plex
     volumes:
@@ -38,6 +39,7 @@ services:
       - PUID=${NASFLIX_PUID}
       - PGID=${NASFLIX_PGID}
       - TZ=${NASFLIX_TZ}
+      - UMASK=${NASFLIX_UMASK}
       - DOCKER_MODS=ghcr.io/gilbn/theme.park:radarr
       - TP_THEME=plex
     volumes:
@@ -61,6 +63,7 @@ services:
     environment:
       - PUID=${NASFLIX_PUID}
       - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
       - TZ=${NASFLIX_TZ}
       - DOCKER_MODS=ghcr.io/gilbn/theme.park:lidarr
       - TP_THEME=plex
@@ -80,16 +83,21 @@ services:
     container_name: jackett
     image: lscr.io/linuxserver/jackett    
     network_mode: host
+#    ports:
+#      - 9117:9117
     environment:
       - PUID=${NASFLIX_PUID}
       - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
       - TZ=${NASFLIX_TZ}
     volumes:
       - ${NASFLIX_CONFIGS}/jackett:/config
       - ${NASFLIX_DOWNLOADS}:/downloads
-#    ports:
-#      - 9117:9117
     restart: unless-stopped
+    labels:
+    - org.hotio.pullio.notify=true
+    - org.hotio.pullio.update=true
+    - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
 
 #Organizr
   organizr:
@@ -102,10 +110,12 @@ services:
     environment:
       - PUID=${NASFLIX_PUID}
       - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
       - TZ=${NASFLIX_TZ}
       - fpm=true
     volumes:
       -  ${NASFLIX_CONFIGS}/organizr:/config
+    restart: unless-stopped
     labels:
     - org.hotio.pullio.notify=true
     - org.hotio.pullio.update=true
@@ -124,6 +134,7 @@ services:
     environment:
       - PUID=${NASFLIX_PUID}
       - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
       - TZ=${NASFLIX_TZ}
     volumes:
       - ${NASFLIX_CONFIGS}/resillo:/config
