@@ -53,7 +53,7 @@ services:
       - TP_THEME=plex
     volumes:
       - ${NASFLIX_CONFIGS}/sonarr:/config
-      - ${NASFLIX_DOWNLOADS}:/nasflix/downloads
+      - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}
       - ${NASFLIX_MEDIA}/tv:/nasflix/media/tv
     restart: unless-stopped     
     labels:
@@ -82,7 +82,7 @@ services:
       - TP_THEME=plex
     volumes:
       - ${NASFLIX_CONFIGS}/radarr:/config
-      - ${NASFLIX_DOWNLOADS}:/nasflix/downloads
+      - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}
       - ${NASFLIX_MEDIA}/movies:/nasflix/media/movies
     restart: unless-stopped
     labels:
@@ -112,7 +112,7 @@ services:
     volumes:
       - ${NASFLIX_CONFIGS}/lidarr:/config
       - ${NASFLIX_MEDIA}/music:/nasflix/music #optional
-      - ${NASFLIX_DOWNLOADS}:/nasflix/downloads #optional
+      - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}
     restart: unless-stopped
     labels:
     - org.hotio.pullio.notify=true
@@ -138,7 +138,8 @@ services:
       - TZ=${NASFLIX_TZ}
     volumes:
       - ${NASFLIX_CONFIGS}/jackett:/config
-      - ${NASFLIX_DOWNLOADS}:/downloads
+    #  - ${NASFLIX_DOWNLOADS}:/downloads
+    #  - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH} #blackhole
     restart: unless-stopped
     labels:
     - org.hotio.pullio.notify=true

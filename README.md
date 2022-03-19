@@ -49,8 +49,34 @@ A Docker Stack for Media Management.  Includes Tv(sonarr), Movies(radarr), Music
 
 
 ---
+
+
+## **.env File config**
+We can control the user information, timezone, and then all our config, media and download paths.  There is also an entry for a discord webhook address for Pullio update notifications.  And Bliss uses the Spotify information to fetch album/artist art.
+
+```
+NASFLIX_PUID=1028
+NASFLIX_PGID=100
+NASFLIX_UMASK-002
+NASFLIX_TZ=America/New_York
+
+NASFLIX_CONFIGS=/volume1/nasflix/appdata
+NASFLIX_MEDIA=/volume1/nasflix/media
+NASFLIX_DOWNLOADS=/volume1/nasflix/downloads
+REMOTE_DOWNLOAD_PATH=/home/jekyll1886/files/completed/
+
+NASFLIX_UPDATE_NOTIFY_WEBHOOK=
+
+NASFLIX_SPOTIFY_SECRET=
+NASFLIX_SPOTIFY_ID=
+```  
+
+
+---
 ## Folders that need creating
 List out which folders are used, needed, then outline that.
+- **Folder Structures**
+  - In the .env we fake the seedbox path that the download clients report.  This allows us to not have to use Path Mapping and has worked great.  
 
 ---
 
@@ -72,9 +98,11 @@ Set up permissions and user per Trash's Resource Guide and then these commands c
 ```
 sudo chown -R docker:users /folder
 
-sudo chmod -R a=,a+rX,u+w,g+w /folder 
+sudo chmod -R a=,a+rX,u+w,g+w /folder  (775)
 ```
 ---
+
+
 
 
 ## Bliss / Spotify Intergration for Artist Images
