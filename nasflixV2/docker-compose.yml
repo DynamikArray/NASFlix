@@ -1,0 +1,386 @@
+version: "3.2"
+
+networks:
+  nasflix:    
+    name: nasflix
+    driver: "bridge"
+
+services:
+#
+# CORE APPLICATIONS
+#
+
+# Traefik
+  reverse-proxy:    
+    hostname: traefik
+    container_name: traefik
+    image: traefik:v2.6 # The official v2 Traefik docker image
+    networks: 
+      - nasflix   
+    # Enables the web UI and tells Traefik to listen to docker
+    command: 
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443" # new
+    ports:
+      # The HTTP port
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${NASFLIX_CONFIGS}/traefik:/etc/traefik
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+
+# Sonar  
+  sonarr:
+    hostname: sonarr
+    container_name: sonarr
+    image: ghcr.io/linuxserver/sonarr
+    depends_on:
+      - reverse-proxy
+    networks: 
+      - nasflix    
+#    ports:
+#      - 8989:8989
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - TZ=${NASFLIX_TZ}
+      - UMASK=${NASFLIX_UMASK}
+      - DOCKER_MODS=ghcr.io/gilbn/theme.park:sonarr
+      - TP_THEME=plex
+    volumes:
+      - ${NASFLIX_CONFIGS}/sonarr:/config
+      - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}
+      - ${NASFLIX_MEDIA}/tv:/nasflix/media/tv
+    restart: unless-stopped     
+    labels:
+      #pullio uppdates
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #trafik
+      - "traefik.enable=true"
+      - "traefik.http.routers.tv.rule=Host(`tv.nasflix`)"
+      - "traefik.port=8989"
+
+# Radar  
+  radarr:
+    hostname: radarr
+    container_name: radarr
+    image: ghcr.io/linuxserver/radarr
+    depends_on:
+      - reverse-proxy
+    networks: 
+      - nasflix   
+    #ports:
+    #  - 7878:7878
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - TZ=${NASFLIX_TZ}
+      - UMASK=${NASFLIX_UMASK}
+      - DOCKER_MODS=ghcr.io/gilbn/theme.park:radarr
+      - TP_THEME=plex
+    volumes:
+      - ${NASFLIX_CONFIGS}/radarr:/config
+      - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}
+      - ${NASFLIX_MEDIA}/movies:/nasflix/media/movies
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.movies.rule=Host(`movies.nasflix`)"
+      - "traefik.port=7878"
+
+#Lidar
+  lidarr:
+    hostname: lidarr
+    container_name: lidarr
+    image: lscr.io/linuxserver/lidarr
+    depends_on:
+      - reverse-proxy
+    networks: 
+      - nasflix   
+    #ports:
+    #  - 8686:8686
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+      - DOCKER_MODS=ghcr.io/gilbn/theme.park:lidarr
+      - TP_THEME=plex
+    volumes:
+      - ${NASFLIX_CONFIGS}/lidarr:/config
+      - ${NASFLIX_MEDIA}/music:/nasflix/music #optional
+      - ${NASFLIX_MEDIA}/ripped:/nasflix/ripped #ripped from spotify
+      - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.music.rule=Host(`music.nasflix`)"
+      - "traefik.port=8686"
+
+
+# Jackett 
+  jackett:
+    hostname: jackett
+    container_name: jackett
+    image: lscr.io/linuxserver/jackett
+    depends_on:
+      - reverse-proxy    
+    networks: 
+      - nasflix   
+    #ports:
+    #  - 9117:9117
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+    volumes:
+      - ${NASFLIX_CONFIGS}/jackett:/config
+    #  - ${NASFLIX_DOWNLOADS}:/downloads
+    #  - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH} #blackhole
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.jackett.rule=Host(`jackett.nasflix`)"
+      - "traefik.port=9117"
+
+  #Resillo Sync 
+  sync:
+    hostname: sync
+    container_name: sync
+    image: lscr.io/linuxserver/resilio-sync
+    depends_on:
+      - reverse-proxy     
+    networks: 
+      - nasflix   
+    ports:
+      - 8888:8888
+      - 55555:55555
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+    volumes:
+      - ${NASFLIX_CONFIGS}/resillo:/config
+      - ${NASFLIX_DOWNLOADS}:/downloads
+      - ${NASFLIX_DOWNLOADS}:/sync
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}  
+      #trafik
+      - "traefik.enable=true"      
+      - "traefik.http.routers.sync.entrypoints=web"
+      - "traefik.http.routers.sync.rule=Host(`sync.nasflix`)"
+      - "traefik.port=8888"
+
+#Navidrome music player
+  navidrome:
+    hostname: navidrome
+    container_name: navidrome
+    image: deluan/navidrome:latest    
+    depends_on:
+      - reverse-proxy        
+    networks: 
+      - nasflix   
+    #ports:
+    #  - "4533:4533"
+    user: ${NASFLIX_PUID}:${NASFLIX_PGID} # should be owner of volumes
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}      
+      # Optional: put your config options customization here. Examples:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info  
+      - ND_SESSIONTIMEOUT=24h      
+      - ND_SPOTIFY_ID=${NASFLIX_SPOTIFY_ID}
+      - ND_SPOTIFY_SECRET=${NASFLIX_SPOTIFY_SECRET}
+    volumes:
+      - ${NASFLIX_CONFIGS}/navidrome:/data
+      - ${NASFLIX_MEDIA}/music:/music:ro      
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+    #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.listen.rule=Host(`listen.nasflix`)"
+      - "traefik.port=4533"
+
+#Petio
+  petio:  
+    hostname: petio
+    container_name: petio
+    image: ghcr.io/petio-team/petio:latest            
+    networks:
+      - nasflix   
+    # ports:
+    #  - '7777:7777'
+    user: ${NASFLIX_PUID}:${NASFLIX_PGID} # should be owner of volumes    
+    depends_on:
+      - reverse-proxy    
+      - mongo
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}  
+    volumes:
+      - ${NASFLIX_CONFIGS}/petio/config:/app/api/config
+      # - ./logs:/app/logs
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.petio.entrypoints=web"
+      - "traefik.http.routers.petio.rule=Host(`petio.nasflix`)"
+      - "traefik.port=7777"
+
+#Mongo - used by Petio
+  mongo:
+      hostname: mongo
+      container_name: mongo
+      image: mongo:4.4     
+      networks:
+        - nasflix   
+      user: ${NASFLIX_PUID}:${NASFLIX_PGID} # should be owner of volumes
+      depends_on:
+        - reverse-proxy          
+      environment:
+        - PUID=${NASFLIX_PUID}
+        - PGID=${NASFLIX_PGID}
+        - UMASK=${NASFLIX_UMASK}
+        - TZ=${NASFLIX_TZ}      
+      volumes:
+        - ${NASFLIX_CONFIGS}/petio/db:/data/db
+      restart: unless-stopped
+      labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+
+
+
+
+# #
+# # TOOLS AND DASHBOARDS
+# #
+
+#Bliss Music Tag Management
+  bliss:
+    hostname: bliss
+    container_name: bliss
+    image: romancin/bliss
+    depends_on:
+      - reverse-proxy
+    networks:
+      - nasflix       
+    # ports:    
+    #  - 3220:3220
+    #  - 3231:3221
+    user: ${NASFLIX_PUID}:${NASFLIX_PGID} # should be owner of volumes
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}      
+    volumes:
+      - ${NASFLIX_CONFIGS}/bliss:/config
+      - ${NASFLIX_MEDIA}/music:/music
+      - ${NASFLIX_MEDIA}/incoming:/incoming
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.bliss.rule=Host(`bliss.nasflix`)"
+      - "traefik.port=3220"
+
+#Tautulli
+  tautulli:
+    hostname: tautulli
+    container_name: tautulli
+    image: lscr.io/linuxserver/tautulli
+    depends_on:
+      - reverse-proxy
+    networks:
+      - nasflix       
+    #ports:    
+    #  - 8181:8181
+    environment:    
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+    volumes:
+       -  ${NASFLIX_CONFIGS}/tautulli:/config
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli.rule=Host(`home.nasflix`)"
+      - "traefik.port=8181"
+
+#Organizr
+  organizr:
+    hostname: organizr
+    container_name: organizr
+    image: organizr/organizr
+    depends_on:
+      - reverse-proxy
+    networks: 
+      - nasflix   
+    environment:    
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+      - fpm=true
+    volumes:
+      -  ${NASFLIX_CONFIGS}/organizr:/config
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.organizr.rule=Host(`organizr.nasflix`)"    
+      - "traefik.port=80"

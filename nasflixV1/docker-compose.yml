@@ -210,6 +210,61 @@ services:
     - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
 
 
+#Petio
+  petio:  
+    hostname: petio
+    container_name: petio
+    image: ghcr.io/petio-team/petio:latest            
+    networks:
+      - nasflix   
+    ports:
+      - '7777:7777'
+    user: ${NASFLIX_PUID}:${NASFLIX_PGID} # should be owner of volumes
+    depends_on:
+        - nginx-proxy    
+        - mongo
+    environment:
+      - VIRTUAL_HOST=petio.nasflix
+      - VIRTUAL_PORT=7777
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}  
+    volumes:
+        - ${NASFLIX_CONFIGS}/petio/config:/app/api/config
+        # - ./logs:/app/logs
+    restart: unless-stopped
+    labels:
+    - org.hotio.pullio.notify=true
+    - org.hotio.pullio.update=true
+    - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+
+#Mongo - used by Petio
+  mongo:
+      hostname: mongo
+      container_name: mongo
+      image: mongo:4.4     
+      networks:
+        - nasflix   
+      user: ${NASFLIX_PUID}:${NASFLIX_PGID} # should be owner of volumes
+      depends_on:
+        - nginx-proxy          
+      environment:
+        - PUID=${NASFLIX_PUID}
+        - PGID=${NASFLIX_PGID}
+        - UMASK=${NASFLIX_UMASK}
+        - TZ=${NASFLIX_TZ}      
+      volumes:
+        - ${NASFLIX_CONFIGS}/petio/db:/data/db
+      restart: unless-stopped
+      labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+
+
+
+
 #
 # TOOLS AND DASHBOARDS
 #
@@ -266,6 +321,8 @@ services:
     - org.hotio.pullio.notify=true
     - org.hotio.pullio.update=true
     - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+
+
 
 
 
