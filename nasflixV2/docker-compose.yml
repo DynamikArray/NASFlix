@@ -124,8 +124,7 @@ services:
       - TP_THEME=plex
     volumes:
       - ${NASFLIX_CONFIGS}/lidarr:/config
-      - ${NASFLIX_MEDIA}/music:/nasflix/music #optional
-      - ${NASFLIX_MEDIA}/ripped:/nasflix/ripped #ripped from spotify
+      - ${NASFLIX_MEDIA}/music:/nasflix/music #optional      
       - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}
     restart: unless-stopped
     labels:
