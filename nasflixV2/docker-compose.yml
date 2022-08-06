@@ -383,3 +383,27 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.organizr.rule=Host(`organizr.nasflix`)"    
       - "traefik.port=80"
+
+#Overseerr"
+  overseerr:
+    hostname: find
+    container_name: find
+    image: sctx/overseerr:latest
+    networks:
+      - nasflix
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+    volumes:
+      -  ${NASFLIX_CONFIGS}/overseerr:/app/config
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.find.rule=Host(`find.nasflix`)"
+      - "traefik.port=5055"
