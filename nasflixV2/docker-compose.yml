@@ -39,7 +39,7 @@ services:
       - org.hotio.pullio.update=true
       - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
 
-# Sonar  
+# Sonar @ tv.nasflix 
   sonarr:
     hostname: sonarr
     container_name: sonarr
@@ -388,7 +388,7 @@ services:
   overseerr:
     hostname: find
     container_name: find
-    image: sctx/overseerr:latest
+    image: lscr.io/linuxserver/overseerr:latest
     networks:
       - nasflix
     environment:
@@ -396,8 +396,10 @@ services:
       - PGID=${NASFLIX_PGID}
       - UMASK=${NASFLIX_UMASK}
       - TZ=${NASFLIX_TZ}
+      - DOCKER_MODS=ghcr.io/gilbn/theme.park:overseerr
+      - TP_THEME=maroon
     volumes:
-      -  ${NASFLIX_CONFIGS}/overseerr:/app/config
+      -  ${NASFLIX_CONFIGS}/overseerr:/config
     restart: unless-stopped
     labels:
       - org.hotio.pullio.notify=true
