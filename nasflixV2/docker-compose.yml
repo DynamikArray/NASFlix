@@ -24,11 +24,15 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443" # new
+      - "--entrypoints.syncHttp.address=:8384"
+      - "--entrypoints.syncTcp.address=:22000"     
+      - "--entrypoints.syncUdp.address=:22000/udp"       
+      - "--entrypoints.syncUdp2.address=:21027/udp" 
     ports:
       # The HTTP port
       - "80:80"
       # The Web UI (enabled by --api.insecure=true)
-      - "8080:8080"
+      - "8080:8080"                       
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
@@ -38,6 +42,63 @@ services:
       - org.hotio.pullio.notify=true
       - org.hotio.pullio.update=true
       - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+
+
+  #Syncthing
+  syncthing:
+    hostname: syncthing
+    container_name: syncthing
+    image: lscr.io/linuxserver/syncthing:latest
+    depends_on:
+      - reverse-proxy     
+    networks: 
+      - nasflix   
+    ports:
+     - 8384:8384
+     - 22000:22000/tcp
+     - 22000:22000/udp
+     - 21027:21027/udp
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+    volumes:
+      - ${NASFLIX_CONFIGS}/syncthing:/config
+      - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH}  
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}  
+      #trafik
+      - "traefik.enable=true"      
+      
+      - "traefik.http.routers.syncthing-rtr.entrypoints=syncHttp"
+      - "traefik.http.routers.syncthing-rtr.rule=Host(`syncthing.nasflix`)"      
+      - "traefik.http.routers.syncthing-rtr.service=syncthing-http-svc"
+      - "traefik.http.services.syncthing-http-svc.loadbalancer.server.port=8384"
+      
+      - "traefik.tcp.routers.syncthing-tcp-rtr.entrypoints=syncTcp"
+      - "traefik.tcp.routers.syncthing-tcp-rtr.rule=HostSNI(`syncthing.nasflix`)"      
+      - "traefik.tcp.routers.syncthing-tcp-rtr.service=syncthing-tcp-svc"
+      - "traefik.tcp.services.syncthing-tcp-svc.loadbalancer.server.port=22000"
+
+      - "traefik.udp.routers.syncthing-udp-rtr.entrypoints=syncUdp"      
+      - "traefik.udp.routers.syncthing-udp-rtr.service=syncthing-udp-svc"
+      - "traefik.udp.services.syncthing-udp-svc.loadbalancer.server.port=22000"
+
+      - "traefik.udp.routers.syncthing-udp2-rtr.entrypoints=syncUdp2"      
+      - "traefik.udp.routers.syncthing-udp2-rtr.service=syncthing-udp-svc"
+      - "traefik.udp.services.syncthing-udp-svc.loadbalancer.server.port=21027"
+
+      
+      
+
+
+
+
+
 
 # Sonar @ tv.nasflix 
   sonarr:
@@ -230,6 +291,12 @@ services:
       - "traefik.http.routers.sync.entrypoints=web"
       - "traefik.http.routers.sync.rule=Host(`sync.nasflix`)"
       - "traefik.port=8888"
+
+
+
+
+      
+
 
 #Navidrome music player
   navidrome:
