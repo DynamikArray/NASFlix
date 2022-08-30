@@ -167,6 +167,38 @@ services:
       - "traefik.http.routers.jackett.rule=Host(`jackett.nasflix`)"
       - "traefik.port=9117"
 
+# Prowlarr 
+  prowlarr:
+    hostname: prowlarr
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:develop
+    depends_on:
+      - reverse-proxy    
+    networks: 
+      - nasflix   
+    #ports:
+    #  - 9696:9696
+    environment:
+      - PUID=${NASFLIX_PUID}
+      - PGID=${NASFLIX_PGID}
+      - UMASK=${NASFLIX_UMASK}
+      - TZ=${NASFLIX_TZ}
+      - DOCKER_MODS=ghcr.io/gilbn/theme.park:prowlarr
+    volumes:
+      - ${NASFLIX_CONFIGS}/prowlarr:/config
+    #  - ${NASFLIX_DOWNLOADS}:/downloads
+    #  - ${NASFLIX_DOWNLOADS}:${REMOTE_DOWNLOAD_PATH} #blackhole
+    restart: unless-stopped
+    labels:
+      - org.hotio.pullio.notify=true
+      - org.hotio.pullio.update=true
+      - org.hotio.pullio.discord.webhook=${NASFLIX_UPDATE_NOTIFY_WEBHOOK}
+      #traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.nasflix`)"
+      - "traefik.port=9696"
+
+
   #Resillo Sync 
   sync:
     hostname: sync
